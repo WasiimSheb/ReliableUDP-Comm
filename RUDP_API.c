@@ -207,15 +207,67 @@ int perform_handshake() {
     return 0;
 }
 
+int rudp_send(int sockfd, struct sockaddr_in dest_addr, int dest_port, void *data, int size){
+    // Send data packet to receiver
+    ssize_t bytes_sent = sendto(sockfd, data, size, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    if (bytes_sent < 0) {
+        perror("sendto failed");
+        return -1;
+    }
 
-// Function to send a close request to the peer
-int rudp_close_request(int sockfd, struct sockaddr_in dest_addr, int dest_port) {
-    char close_request_msg[] = "Close request";
-    return rudp_send(sockfd, dest_addr, dest_port, close_request_msg, strlen(close_request_msg));
+    // Wait for ACK from receiver
+    if (handle_ack(sockfd) < 0) {
+        // Handle retransmission if no ACK received
+        printf("No ACK received. Retransmitting...\n");
+        return rudp_send(sockfd, dest_addr, dest_port, data, size);
+    }
+
+    // ACK received, continue sending next packet
+    return bytes_sent;
 }
 
-// Function to acknowledge the close request
-int rudp_close_ack(int sockfd, struct sockaddr_in dest_addr, int dest_port) {
-    char close_ack_msg[] = "Close acknowledgment";
-    return rudp_send(sockfd, dest_addr, dest_port, close_ack_msg, strlen(close_ack_msg));
+int handle_ack(int sockfd){
+    struct sockaddr_in sender_addr;
+    socklen_t addr_len = sizeof(sender_addr);
+    char ack_msg[256];
+
+    // Receive ACK from sender
+    ssize_t bytes_received = recvfrom(sockfd, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&sender_addr, &addr_len);
+    if (bytes_received < 0) {
+        perror("recvfrom ACK failed");
+        return -1;
+    }
+
+    // Process received ACK
+    printf("Received ACK: %s\n", ack_msg);
+
+    return bytes_received;
+}
+
+int rudp_recv(int sockfd, struct sockaddr_in *src_addr, int *src_port, void *buffer, int size) {
+    // Receive data packet from sender
+    ssize_t bytes_received = recvfrom(sockfd, buffer, size, 0, (struct sockaddr *)src_addr, sizeof(*src_addr));
+    if (bytes_received < 0) {
+        perror("recvfrom failed");
+        return -1;
+    }
+    
+    // Send ACK to sender
+    if (send_ack(sockfd, *src_addr, *src_port) < 0) {
+        perror("send_ack failed");
+        return -1;
+    }
+
+    return bytes_received;
+}
+
+int send_ack(int sockfd, struct sockaddr_in dest_addr, int dest_port) {
+    // Construct ACK packet
+    char ack_msg[] = "ACK";
+    ssize_t bytes_sent = sendto(sockfd, ack_msg, strlen(ack_msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    if (bytes_sent < 0) {
+        perror("sendto ACK failed");
+        return -1;
+    }
+    return bytes_sent;
 }
