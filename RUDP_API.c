@@ -6,11 +6,6 @@
 #include <sys/time.h>
 #include "RUDP_API.h"
 #include <sys/time.h>
-#define SERVER_PORT 8080
-#define CLIENT_PORT 9090
-#define SERVER_IP "127.0.0.1" // Change this to the server's IP address
-#define CRC32_POLYNOMIAL 0xEDB88320L
-#define max_wait_time 2
 
 // Function to create RUDP socket and perform handshake
 #include "RUDP_API.h"
@@ -128,9 +123,9 @@ int send_message_with_checksum(int sockfd, const char *message, size_t size, str
 }
 
 // Function to receive message with CRC-32 checksum
-ssize_t recv_message_with_checksum(int sockfd, char *buffer, size_t size, struct sockaddr_in *src_addr) {
+size_t recv_message_with_checksum(int sockfd, char *buffer, size_t size, struct sockaddr_in *src_addr) {
     // Receive message with checksum
-    ssize_t bytes_received = recvfrom(sockfd, buffer, size, 0, (struct sockaddr *)src_addr, sizeof(struct sockaddr_in));
+    size_t bytes_received = recvfrom(sockfd, buffer, size, 0, (struct sockaddr *)src_addr, sizeof(struct sockaddr_in));
     if (bytes_received < 0) {
         perror("recvfrom failed");
         return -1;
@@ -251,7 +246,7 @@ int rudp_recv(int sockfd, struct sockaddr_in *src_addr, int *src_port, void *buf
         perror("recvfrom failed");
         return -1;
     }
-    
+
     // Send ACK to sender
     if (send_ack(sockfd, *src_addr, *src_port) < 0) {
         perror("send_ack failed");
@@ -270,4 +265,16 @@ int send_ack(int sockfd, struct sockaddr_in dest_addr, int dest_port) {
         return -1;
     }
     return bytes_sent;
+}
+
+int rudp_close(int sockfd) {
+    // Perform any cleanup tasks here, such as closing the socket
+    if (close(sockfd) == -1) {
+        perror("Error closing socket");
+        return -1; // Return -1 on failure
+    }
+    
+    // Optionally, perform any additional cleanup tasks
+    
+    return 0; // Return 0 on success
 }
