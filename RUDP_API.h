@@ -1,102 +1,47 @@
-#ifndef RUDP_API_H
-#define RUDP_API_H
-
-#include <stdio.h>          // Standard input/output functions
-#include <stdlib.h>         // Standard library functions
-#include <string.h>         // String manipulation functions
-#include <unistd.h>         // POSIX operating system API
-#include <sys/socket.h>     // Socket programming functions
-#include <netinet/in.h>     // Internet address family structures
-#include <arpa/inet.h>      // Functions for manipulating IP addresses
+/*Header file for the Reliable UDP (RUDP) API.*/
+#include <stdint.h>   // For uint8_t, uint16_t
+#include <stdbool.h>  // For bool type
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <stdbool.h>
-#define TIMEOUT_SEC 5
-/**
- * rudp packet which contains the information that we'll need to print the statistics of the packet itself
-*/
-typedef struct rudpp{
+#define BUFFER_SIZE 2097152 //Maximum size for sending/receiving data in RUDP.
+#define MAX_PACKET_SIZE 8192
+
+typedef struct rudp_flags{
+    u_int8_t data;
+    u_int8_t done;
+    u_int8_t ack;
+    u_int8_t syn;
+}flags;
+
+typedef struct Rudp_socket{
     u_int16_t len;
-    u_int32_t checksum;
-    u_int8_t flags;
-    u_int32_t ack;
-    u_int16_t seq_n;
-    char buffersize[256];
-}Rudp_pack;
-
-/**
- * a struct contains two fields which are for the destination address and the other for if there is a connection.
-*/
-typedef struct rudpsocket{
-    int available;
-    struct sockaddr_in destinationaddr;
-}Rudp_socket;
+    u_int16_t checksum;
+    int seqnum;
+    char data[MAX_PACKET_SIZE];
+    flags flags;
+}rudp_sock;
 
 
-/**
- * performing the handshake protocol in the rudp socket, where it would return 0 if it succeeded
-*/
-int perform_handshake();
+/*in this implementation instead of returning a pointer to the RUDP_Socket itslef we'll return an integer pointing to whether the function succeeded doing it's work*/
 
+// creating an rudp socket, returning -1 if it did not succeed
+int rudp_socket();
 
-/**
- * Function in order to calculate the checksum
-*/
-int checksum();
+// Tries to connect to the other side via RUDP to given IP and port. Returns 0 on failure and 1 on success. Fails if called when the socket is connected/set to server.
+int rudp_connect(int sockfd, const char *dest_ip, unsigned short int dest_port);
 
-/**
- * @file RUDP_API.h
- * @brief Header file for the Reliable UDP (RUDP) API.
- */
+// Accepts incoming connection request and completes the handshake, returns 0 on failure and 1 on success. Fails if called when the socket is connected/set to client.
+int rudp_accept(int sockfd, int port);
 
-// Function prototypes for RUDP API
+// Receives data from the other side and put it into the buffer. Returns the number of received bytes on success, 0 if got FIN packet (disconnect), and -1 on error. Fails if called when the socket is disconnected.
+int rudp_recv(int sockfd, void *buffer, unsigned int buffer_size);
 
-/**
- * @brief Create a RUDP socket and establish a connection with the peer.
- * 
- * @param port The port number to bind the socket.
- * @return The file descriptor of the RUDP socket on success, or -1 on failure.
- */
-int rudp_socket(int port);
+// Sends data stores in buffer to the other side. Returns the number of sent bytes on success, 0 if got FIN packet (disconnect), and -1 on error. Fails if called when the socket is disconnected.
+int rudp_send(int sockfd, void *buffer, unsigned int buffer_size);
 
-/**
- * @brief Send data to the peer using RUDP.
- * 
- * @param sockfd The file descriptor of the RUDP socket.
- * @param dest_addr The address of the destination peer.
- * @param dest_port The port number of the destination peer.
- * @param data Pointer to the data to be sent.
- * @param size Size of the data to be sent.
- * @return Number of bytes sent on success, or -1 on failure.
- */
-int rudp_send(int sockfd, struct sockaddr_in dest_addr, int dest_port, void *data, int size);
+// Disconnects from an actively connected socket. Returns 1 on success, 0 when the socket is already disconnected (failure).
+int rudp_disconnect(int sockfd);
 
-/**
- * @brief Receive data from the peer using RUDP.
- * 
- * @param sockfd The file descriptor of the RUDP socket.
- * @param src_addr Pointer to store the source address of the received data.
- * @param src_port Pointer to store the source port of the received data.
- * @param buffer Buffer to store the received data.
- * @param size Size of the buffer.
- * @return Number of bytes received on success, or -1 on failure.
- */
-int rudp_recv(int sockfd, struct sockaddr_in *src_addr, int *src_port, void *buffer, int size);
-
-/**
- * @brief Close the RUDP connection.
- * 
- * @param sockfd The file descriptor of the RUDP socket to be closed.
- * @return 0 on success, or -1 on failure.
- */
+// This function releases all the memory allocation and resources of the socket.
 int rudp_close(int sockfd);
-
-/**
- * Function to send ACK to sender
- * */ 
-int send_ack(int sockfd, struct sockaddr_in dest_addr, int dest_port);
-
-/**
- * Function to handle the ACK from the server
-*/
-int handle_ack(int sockfd);
-
-#endif /* RUDP_API_H */
