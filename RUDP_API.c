@@ -406,6 +406,7 @@ int rudp_receive(int socket, char **buffer, int *size){
             perror("setsockopt");
             return -1;
         }
+        ////    set_time(socket, 10000000);
             return 5;  // Message received and connection closed
         }
 
@@ -442,6 +443,7 @@ int rudp_receive(int socket, char **buffer, int *size){
         if (setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
         perror("setsockopt");
         return -1;
+     //   set_time(socket, 1 * 10);
         rudp = malloc(sizeof(rudp_sock));
         time_t finishing= time(NULL);
 
