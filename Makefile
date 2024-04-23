@@ -1,23 +1,30 @@
 CC = gcc
-LDFLAGS = -lm
+CFLAG = -Wall -g
+AR = ar
+AFLAGS = rcs
 
-SENDER_SRC = RUDP_Sender.c
-RECEIVER_SRC = RUDP_Receiver.c
-RUDP_API_SRC = RUDP_API.c
-COMMON_OBJ = $(RUDP_API_SRC:.c=.o)
-SENDER_OBJ = $(SENDER_SRC:.c=.o)
-RECEIVER_OBJ = $(RECEIVER_SRC:.c=.o)
+.PHONY: all clean
 
 all: RUDP_Sender RUDP_Receiver
 
-RUDP_Sender: $(COMMON_OBJ) $(SENDER_OBJ)
-	$(CC) -o RUDP_Sender $(COMMON_OBJ) $(SENDER_OBJ) $(LDFLAGS)
+RUDP_Receiver: RUDP_Receiver.o RUDP_API.a
+	$(CC) $(CFLAGS) $^ -o $@
 
-RUDP_Receiver: $(COMMON_OBJ) $(RECEIVER_OBJ)
-	$(CC) -o RUDP_Receiver $(COMMON_OBJ) $(RECEIVER_OBJ) $(LDFLAGS)
+RUDP_Receiver.o: RUDP_Receiver.c RUDP_API.h
+	$(CC) $(CFLAGS) -c $<
 
-%.o: %.c
-	$(CC) -c $< -o $@
+RUDP_Sender: RUDP_Sender.o RUDP_API.a
+	$(CC) $(CFLAGS) $^ -o $@
+
+RUDP_Sender.o: RUDP_Sender.c RUDP_API.h
+	$(CC) $(CFLAGS) -c $<
+
+# Creating a library for the API
+RUDP_API.a: RUDP_API.o
+	$(AR) $(AFLAGS) $@ $<
+
+RUDP_API.o: RUDP_API.c RUDP_API.h
+	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f RUDP_Sender RUDP_Receiver *.o
+	rm -f *.o *.a RUDP_Sender RUDP_Receiver recieved_data
