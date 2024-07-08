@@ -27,4 +27,4 @@ RUDP_API.o: RUDP_API.c RUDP_API.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o *.a RUDP_Sender RUDP_Receiver recieved_data
+	rm -f *.o *.a RUDP_Sender RUDP_Receiver
